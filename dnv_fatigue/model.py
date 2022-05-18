@@ -2,6 +2,7 @@ from enum import Enum
 
 import numpy as np
 from quantities import Quantity
+from scipy.interpolate import interp2d
 
 
 class Environment(str, Enum):
@@ -178,6 +179,14 @@ def utilization_factor(design_fatigue_factor: float, design_life: float):
             xp=DESIGN_LIFE_ARRAY,
             fp=TABLE_5_8[design_fatigue_factor],
         )
+    else:
+        table_array = np.array([value for value in TABLE_5_8.values()])
+        func = interp2d(
+            x=DESIGN_LIFE_ARRAY,
+            y=list(TABLE_5_8.keys()),
+            z=table_array
+        )
+        return func(design_life, design_fatigue_factor)
 
 
 def reduction_factor(
@@ -224,12 +233,21 @@ def reduction_factor(
         Environment.AIR: tables_air,
         Environment.SEAWATER_WITH_CATHODIC_PROTECTION: tables_sea
     }
-    if utilization_factor in TABLE_5_4.keys():
+    if float(utilization_factor) in TABLE_5_4.keys():
         return np.interp(
             x=weibull_factor,
             xp=WEIBULL_ARRAY,
             fp=tables[environment][sn_curve_type][utilization_factor]
         )
+    else:
+        table = tables[environment][sn_curve_type]
+        table_array = np.array([value for value in table.values()])
+        func = interp2d(
+            x=WEIBULL_ARRAY,
+            y=list(TABLE_5_4.keys()),
+            z=table_array
+        )
+        return func(weibull_factor, utilization_factor)
 
 
 def allowable_stress_range(allowable_extreme_stress: Quantity, reduction_factor: float):
